@@ -2,14 +2,14 @@ SRC_DIR:=src
 
 TOOLS:=tutorial04
 
-#TARGET:=native
-TARGET:=byte
+TARGET:=native
+#TARGET:=byte
 
-LLVM_VERSION := 3.8
-CLANG := clang-$(LLVM_VERSION)
+LLVM_VERSION := 8.0
+CLANG := clang
 LLC := llc-$(LLVM_VERSION)
 
-OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
+OCAMLBUILDFLAGS:=-r -classic-display -j 0 -cflags -w,@a-4
 
 export OCAMLPATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION)
 

@@ -2,11 +2,11 @@ SRC_DIR:=src
 
 TOOLS:=tutorial02
 
-#TARGET:=native
-TARGET:=byte
+TARGET:=native
+#TARGET:=byte
 
-LLVM_VERSION := 3.8
-CLANG := clang-$(LLVM_VERSION)
+LLVM_VERSION := 8.0
+CLANG := clang
 
 OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
 

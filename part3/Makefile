@@ -5,8 +5,8 @@ TOOLS:=tutorial03
 #TARGET:=native
 TARGET:=byte
 
-LLVM_VERSION := 3.8
-CLANG := clang-$(LLVM_VERSION)
+LLVM_VERSION := 8.0
+CLANG := clang
 LLC := llc-$(LLVM_VERSION)
 
 OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
