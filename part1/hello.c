@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-// your function here with solution
+// your function here with solution 
 int add2(int a, int b)
 {
 	return a + b;
