@@ -3,4 +3,5 @@ build
 hello.bc
 hello.ll
 hello.o
+hello.s
 a.out
