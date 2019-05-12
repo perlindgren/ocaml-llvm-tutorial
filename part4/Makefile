@@ -7,25 +7,18 @@ TARGET:=native
 
 LLVM_VERSION := 8.0
 CLANG := clang
-LLC := llc-$(LLVM_VERSION)
+LLC := llc
 
 OCAMLBUILDFLAGS:=-r -classic-display -j 0 -cflags -w,@a-4
 
-export OCAMLPATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION)
+export OCAMLPATH=/usr/lib/ocaml/llvm
 
 tutorial04_OCAMLBUILDFLAGS:=-use-ocamlfind -pkgs llvm,llvm.analysis,llvm.bitwriter,llvm.target,llvm_X86 -lflags -ccopt,-L/usr/lib/llvm-$(LLVM_VERSION)/lib
-
-
-
 
 ################
 OCAMLBUILD:=ocamlbuild
 
-
-
 CLEAN_RULES:=$(patsubst %,%-clean,$(TOOLS))
-
-
 
 .PHONY: $(TOOLS) clean $(CLEAN_RULES) default run
 
@@ -53,4 +46,4 @@ hello.s: hello.bc
 	$(LLC) $<
 
 hello.bc: $(TOOLS)
-	CAML_LD_LIBRARY_PATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION) ./build/tutorial04/src/tutorial04.byte $@
+	./build/tutorial04/src/tutorial04.byte $@

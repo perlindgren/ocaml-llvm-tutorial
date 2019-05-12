@@ -10,22 +10,14 @@ CLANG := clang
 
 OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
 
-#export OCAMLPATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION)
 export OCAMLPATH=/usr/lib/ocaml/llvm
 
 tutorial01_OCAMLBUILDFLAGS:=-use-ocamlfind -pkgs llvm,llvm.bitreader -lflags -ccopt,-L/usr/lib/llvm-$(LLVM_VERSION)/lib
 
-
-
-
 ################
 OCAMLBUILD:=ocamlbuild
 
-
-
 CLEAN_RULES:=$(patsubst %,%-clean,$(TOOLS))
-
-
 
 .PHONY: $(TOOLS) clean $(CLEAN_RULES) default run
 
@@ -37,11 +29,21 @@ $(TOOLS):
 run: $(TOOLS) hello.bc
 	./build/tutorial01/src/tutorial01.$(TARGET) hello.bc
 
+ 
 clean: $(CLEAN_RULES)
-	-rm -f hello.bc
+	-rm -f a.out hello.bc hello.s hello.ll
 
 $(CLEAN_RULES):
 	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) -I $(SRC_DIR) -build-dir build/$(patsubst %-clean,%,$@) -clean $(patsubst %-clean,%,$@).$(TARGET)
 
+a.out: hello.c
+	$(CLANG) hello.c
+
 hello.bc: hello.c
 	$(CLANG) -c -emit-llvm $<
+
+hello.s: hello.c
+	$(CLANG) -S $<
+
+hello.ll: hello.c
+	$(CLANG) -S -emit-llvm $<

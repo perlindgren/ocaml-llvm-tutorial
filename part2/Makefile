@@ -10,21 +10,14 @@ CLANG := clang
 
 OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
 
-export OCAMLPATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION)
+export OCAMLPATH=/usr/lib/ocaml/llvm
 
 tutorial02_OCAMLBUILDFLAGS:=-use-ocamlfind -pkgs llvm,llvm.bitreader -lflags -ccopt,-L/usr/lib/llvm-$(LLVM_VERSION)/lib
-
-
-
 
 ################
 OCAMLBUILD:=ocamlbuild
 
-
-
 CLEAN_RULES:=$(patsubst %,%-clean,$(TOOLS))
-
-
 
 .PHONY: $(TOOLS) clean $(CLEAN_RULES) default run
 
@@ -34,7 +27,7 @@ $(TOOLS):
 	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS_$(TARGET)) -I $(SRC_DIR) -build-dir build/$@ $@.$(TARGET)
 
 run: $(TOOLS) hello.bc
-	CAML_LD_LIBRARY_PATH=/usr/lib/ocaml/llvm-$(LLVM_VERSION) ./build/tutorial02/src/tutorial02.byte hello.bc
+	./build/tutorial02/src/tutorial02.$(TARGET) hello.bc
 
 clean: $(CLEAN_RULES)
 	-rm -f hello.bc
