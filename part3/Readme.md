@@ -1,206 +1,157 @@
 # Tutorial 3
 
-In this tutorial we will learn more about the LLVM API, and howto access LLVM-IR from OCaml.
+This part explains how to create LLVM IR, and write a simple application from scratch, and see how to build and run it.
 
----
+## Modules
 
-## LLVM objects
-
-The top-level container is a module (`llmodule`). The module contains global variables, types and functions, which in turn contains basic blocks, and basic blocks contain instructions.
-
-## Values
-
-In the OCaml bindings, all objects (variables, functions, instructions) are instances of the opaque type `llvalue`.
-
-A value has a type, a name, a definition, a list of users, and other things like attributes (for ex. visibility or linkage options) or aliases.
-
-Each value has a type (`lltype`), which is a composite object to define the type of a value and its arguments. To match the real type, it needs to be converted to a `TypeKind.t`:
+As in the previous tutorial, we need to create a context and a module:
 
 ``` OCaml
-let rec print_type llty =
-  let ty = Llvm.classify_type llty in
-  match ty with
-  | Llvm.TypeKind.Function -> Printf.printf "  function\n"
-  | Llvm.TypeKind.Pointer  -> Printf.printf "  pointer to" ; print_type (Llvm.element_type llty)
-  | _                      -> Printf.printf "  other type\n"
-```
-
-We define a simple function to print a few informations about the input `llvalue` argument:
-
-```
-let print_val lv =
-  Printf.printf "Value\n" ;
-  Printf.printf "  name %s\n" (Llvm.value_name lv) ;
-  let llty = Llvm.type_of lv in
-  Printf.printf "  type %s\n" (Llvm.string_of_lltype llty) ;
-  print_type llty ;
-  ()
-```
+let llctx = global_context () in
+let llm = create_module llctx "mymodule" in
+``` 
 
 ## Functions
 
-The lookup_function can be used to get the `llvalue` associated to a function. It returns an `llvalue` option, so we must use match to check if the function exists:
+There are two actions that can be done on functions:
+
+- declare_function to give only a declaration of the prototype,
+
+- define_function to give both the declaration and the implementation.
+
+In both cases, we need to give the signature (return type, number and type of arguments) of the function.
+
+This is pretty similar to C. We’ll use this to declare the function int `main(void)`.
+
+The `int` type is a bit problematic in LLVM (and in C, but for other reasons): integer types must have a known size in LLVM. While this does not change the architecture-independent property of LLVM IR, it can sometimes create problems when writing code that has to run on 32 and 64 bits platforms, while trying to use registers for performance reasons.
+
+Here, we will declare a 32 bits integer type (mostly to simplify later commands):
 
 ``` OCaml
-let opt_lv = Llvm.lookup_function "main" llm in
-match opt_lv with
-| Some lv -> print_val lv
-| None    -> Printf.printf "'main' function not found\n"
+let i32_t = i32_type llctx in
 ```
 
-If you don’t know the name of the functions, or simply wants to iterate on all functions, you can use the `iter_functions`, `fold_left_functions`, and similar functions:
+and use it to declare the prototype of the function
 
 ``` OCaml
-Llvm.iter_functions print_val llm ;
-let count =
-  Llvm.fold_left_functions
-    (fun acc lv ->
-      print_val lv ;
-      acc + 1
-    )
-    0
-    llm
-in
-Printf.printf "Functions count: %d\n" count ;
+let fty = function_type i32_t [| |] in
 ```
 
-If you run the above code, please note that when iterating on functions, you always get a pointer to the function, not the function directly.
+The `i32_t` here is the return type, and the array is the type of arguments (empty means void, not unknown or variable).
 
-As usual in OCaml, it is better (for efficiency) to use the tail-recursive functions (for ex, fold_right_functions is not), especially when running on large LLVM modules. (Hopefully, the documentation clearly indicates if the iteration functions are tail-recursive or not.)
-
-## Basic blocks and instructions
-
-In LLVM, a function is made of basic blocks, which are lists of instructions. Basic blocks have zero or more instructions, but they must be ended by a terminator instruction, which indicates which blocks must be executed after the current one is ended. Basically, a terminator instruction is a flow change (ret, br, switch, indirectbr, invoke, resume), or unreachable.
-
-A function has at least one basic block, the entry point.
-
-The LLVM instructions are in static single assignment (SSA) form: a value is created by an instruction and can be assigned only once, and an instruction must only use values that are previously defined (in more precise words, the definition of a value must dominate all of its uses).
-
-It is very important that the LLVM bitcode is well-formed: all constraints will be checked by the compiler, and the module will be rejected if not correct (the LLVM code uses internal assertions). As a consequence, you will get a segmentation fault if the compiler is compiled in release mode.
-
-For example, to iterate on all instructions of all basic blocks of a function:
+The signature type can then be used to create the function, in the current module:
 
 ``` OCaml
-let print_fun lv =
-  Llvm.iter_blocks
-    (fun llbb ->
-      Printf.printf "  bb: %s\n" (Llvm.value_name (Llvm.value_of_block (llbb))) ;
-      Llvm.iter_instrs
-        (fun lli ->
-          Printf.printf "    instr: %s\n" (Llvm.string_of_llvalue lli)
-        )
-        llbb
-    )
-    lv
+let f = define_function "main" fty llm in
 ```
 
-Note that the order on the iteration of basic blocks is the iteration on the oriented graph (the control flow graph) of the function.
+The returned object `f` is a `llvalue`, so functions from the previous tutorial to print the type or the content of the value can be used.
 
-## Global variables
+The function is currently empty: it contains a single basic block (the entry block) with no instructions. We now need to add instructions.
 
-Access to global variables is done using similar functions: `iter_globals`, `fold_left_globals`, etc.
+## Instructions
+
+To add basic blocks and instructions, we first need to create a `llbuilder` object. The instruction builder is used to insert instruction at its position. We create a builder, positioned at the end of the entry block of the function `f`:
+
+``` OCaml
+let llbuilder = builder_at_end llctx (entry_block f) in
+```
+
+Now that we have the context, the function and the builder objects, we can insert instructions. For this very simple example, we will only simulate a `return 0`:
+
+``` OCaml
+let _ = build_ret (const_int i32_t 0) llbuilder in
+```
+
+To write the module, it is possible either to simple dump it (and save `stderr`), or to use the `Llvm_bitwriter` modules.
+
+We this we intend to build something along the lines of:
+
+``` LLVM
+; ModuleID = 'mymodule'
+
+define i32 @main() {
+entry:
+  ret i32 0
+}
+```
 
 ---
 
-## Making a run for it!
+## Building the module
+
+The following is not related to the OCaml bindings, but to cover the topic, I will explain how to build the resulting module.
+
+First, if the output was saved as text (LLVM IR) in a file hello.ll, it needs to be compiled to LLVM bitcode:
 
 ``` shell
-> make run > out
+> llvm-as hello.ll
 ```
 
-The file `out` is dispayed below:
+If the LLVM module was saved using `Llvm_bitwriter.write_bitcode_file`, then it is already in bitcode format.
+
+Then, the `llc` compiler is used to produce an assembly file from the bitcode:
 
 ``` shell
-ocamlbuild -classic-display -j 0 -cflags -w,@a-4 -use-ocamlfind -pkgs llvm,llvm.bitreader -lflags -ccopt,-L/usr/lib/llvm-8.0/lib  -I src -build-dir build/tutorial02 tutorial02.native
-# No parallelism done
-./build/tutorial02/src/tutorial02.native hello.bc
-*** lookup_function ***
-Value
-  name main
-  type i32 ()*
-  pointer to  function
-*** iter_functions ***
-Value
-  name main
-  type i32 ()*
-  pointer to  function
-Value
-  name printf
-  type i32 (i8*, ...)*
-  pointer to  function
-*** fold_left_functions ***
-Value
-  name main
-  type i32 ()*
-  pointer to  function
-Value
-  name printf
-  type i32 (i8*, ...)*
-  pointer to  function
-Functions count: 2
-*** basic blocks/instructions ***
-  bb: 
-    instr:   %1 = alloca i32, align 4
-    instr:   store i32 0, i32* %1, align 4
-    instr:   %2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0))
-    instr:   ret i32 0
-*** iter_globals ***
-Value
-  name .str
-  type [14 x i8]*
-  pointer to  array of  integer
+> llc hello.bc
 ```
 
-In this case, `hello.c` was compiled without optimizations.
+`llc` has many options, some of the most interesting are:
 
----
+- -O0, -O1, -O2 ...: the “classical” optimization options
+
+-  -march=<arch>: specify the target architecture (x86, x86-64, arm, etc.). The list of architectures can be found using `llc 
+--version`.
+
+The options are described in the `llc --help` command. However, this is not an exhaustive list, and there are many undocumented options. A more complete list can be obtained using the (undocumented) `llc --help-hidden` command.
+
+Note: the `--help` arguments gives 126 options here, while the `--help-hidden` is some 2k lines long (a horrible read).
+
+After that, the assembly file is compiled as usual into an object file, then an executable.
+
+``` shell
+> clang -c hello.s
+> clang -o hello hello.o
+```
+
+The executable from this example works as expected (it does nothing):
+
+``` shell
+> ./hello
+> echo $?
+0
+```
+
+(Under `fish` shell, use `echo $status` to print the returned status of the last invoked program.)
 
 ## Exercise 1
 
-Make a branch `t2_ex1` where you work on exercise 1.
+Make a branch `t3_ex1` where you work on exercise 1.
 
-Generate `hello.ll`:
+Change the program (`src/tutorial03.ml`) to return a 1 (instead of 0).
 
 ``` shell
-> clang -S -emit-llvm hello.c
-> make run > out
+> make clean
+> make run
 ```
 
-Now edit the `out` file, and carefully match the `out` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
+Now inspect the status:
 
-Commit your edited `out` file.
+``` shell
+> echo $?
+```
+
+You got a 2, right? 
+
+Now try:
+
+``` shell
+> ./hello
+> echo $?
+```
+
+You got a 1, right? (If not your program did not compil correctly).
+
+Try figuring out why the status was 2 when running `make run` (look at the Makefile, what did it actually do?).
 
 ## Exercise 2
-
-Make a branch `t2_ex2` where you work on exercise 2.
-
-Now use your `hello.c` with the `add2` function.
-
-``` shell
-> cp ../part1/hello.c
-> clang -S -emit-llvm hello.c
-> make run > out2
-```
-
-Now edit the `out2` file, and carefully match the `out2` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out2` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
-
-Commit your edited `out2` file.
-
-## Exercise 3
-
-Make a branch `t2_ex3` where you work on exercise 3.
-
-Now its finally time for some coding. Change the program (`src/tutorial02.ml`) to that it prints the basic blocks for each function (intstead of printing all basic blocks at top level). 
-
-Make sure your program compiles without errors/warnings and that it produces the expected output.
-
----
-
-## Learning outcomes
-
-1. Understanding LLVM objects, values, functions, basic blocs and instructions.
-
-2. Understanding how to inspect/traverse the LLVM objects.
-
-3. Writing OCaml to inspect specific LLVM objects.
-
