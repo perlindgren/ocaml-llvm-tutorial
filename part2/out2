@@ -1,0 +1,59 @@
+ocamlbuild -classic-display -j 0 -cflags -w,@a-4 -use-ocamlfind -pkgs llvm,llvm.bitreader -lflags -ccopt,-L/usr/lib/llvm-8.0/lib  -I src -build-dir build/tutorial02 tutorial02.native
+# No parallelism done
+./build/tutorial02/src/tutorial02.native hello.bc
+*** lookup_function ***
+Value
+  name main
+  type i32 ()*
+  pointer to  function
+*** iter_functions ***
+Value
+  name add2
+  type i32 (i32, i32)*
+  pointer to  function
+Value
+  name main
+  type i32 ()*
+  pointer to  function
+Value
+  name printf
+  type i32 (i8*, ...)*
+  pointer to  function
+*** fold_left_functions ***
+Value
+  name add2
+  type i32 (i32, i32)*
+  pointer to  function
+Value
+  name main
+  type i32 ()*
+  pointer to  function
+Value
+  name printf
+  type i32 (i8*, ...)*
+  pointer to  function
+Functions count: 3
+*** basic blocks/instructions ***
+  bb: 
+    instr:   %3 = alloca i32, align 4
+    instr:   %4 = alloca i32, align 4
+    instr:   store i32 %0, i32* %3, align 4
+    instr:   store i32 %1, i32* %4, align 4
+    instr:   %5 = load i32, i32* %3, align 4
+    instr:   %6 = load i32, i32* %4, align 4
+    instr:   %7 = add nsw i32 %5, %6
+    instr:   ret i32 %7
+  bb: 
+    instr:   %1 = alloca i32, align 4
+    instr:   %2 = alloca i32, align 4
+    instr:   store i32 0, i32* %1, align 4
+    instr:   %3 = call i32 @add2(i32 2, i32 3)
+    instr:   store i32 %3, i32* %2, align 4
+    instr:   %4 = load i32, i32* %2, align 4
+    instr:   %5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i32 0, i32 0), i32 %4)
+    instr:   ret i32 0
+*** iter_globals ***
+Value
+  name .str
+  type [29 x i8]*
+  pointer to  array of  integer

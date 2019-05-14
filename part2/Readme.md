@@ -151,213 +151,56 @@ Value
   pointer to  array of  integer
 ```
 
-This will compile the `hello.c` into a `.bc` LLVM bitcode file (binary LLVM representation of the program). It will also build and run the `src/tutorial01.ml` OCaml program, that reads the bitcode file (using the `llvm-ocmal` bindings) and prints the resulting representation in text format.
-
-## Project layout
-
-``` shell
-part1/
-├── build
-├── Makefile
-└── src
-    └── tutorial01.ml
-```
-
-Let's break down the source file:
-
-``` OCaml
-  let llctx = Llvm.global_context () in
-```
-
-LLVM requires a context (LLVMContext in the C++ API), to transparently own and manage all data. Here, there is no need to create a context, so we get the global one.
-
-``` OCaml
-  let llmem = Llvm.MemoryBuffer.of_file Sys.argv.(1) in
-```
-
-This line takes the first command-line argument of the application, and uses the LLVM-OCaml bindings API to read it into memory (as a `llmemorybuffer` opaque object). Input format should be LLVM bitcode, usually a file with the `.bc` extension.
-
-``` OCaml
-  let llm = Llvm_bitreader.parse_bitcode llctx llmem in
-```
-
-After reading the LLVM bitcode file, the `llmemorybuffer` can now be parsed to create a LLVM module, in OCaml a `llmodule`. In LLVM, a module is a single unit of code to process. It contains things like functions, structures definitions and global variables, and usually matches the content of a single file to be compiled.
-
-``` OCaml
-  Llvm.dump_module llm ;
-```
-
-The dump_module function prints the contents of the module to `stderr`, in the textual LLVM IR form (you may also dump to a file or string, see detailed API). Its main purpose is debugging, and fits well the goal of this first tutorial.
-
-## Makefile
-
-The makefile also defines:
-
-``` shell
-> make clean
-```
-
-The complete `Makefile` is depicted below.
-
-`TARGET` set to `native` for binary exuctable, or `byte` for `ocamlrun` executable.
-
-``` Make
-SRC_DIR:=src
-
-TOOLS:=tutorial01
-
-TARGET:=native
-#TARGET:=byte
-
-LLVM_VERSION := 8.0
-CLANG := clang
-
-OCAMLBUILDFLAGS:=-classic-display -j 0 -cflags -w,@a-4
-
-export OCAMLPATH=/usr/lib/ocaml/llvm
-
-tutorial01_OCAMLBUILDFLAGS:=-use-ocamlfind -pkgs llvm,llvm.bitreader -lflags -ccopt,-L/usr/lib/llvm-$(LLVM_VERSION)/lib
-
-################
-OCAMLBUILD:=ocamlbuild
-
-CLEAN_RULES:=$(patsubst %,%-clean,$(TOOLS))
-
-.PHONY: $(TOOLS) clean $(CLEAN_RULES) default run
-
-default: $(TOOLS)
-
-$(TOOLS):
-	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS_$(TARGET)) -I $(SRC_DIR) -build-dir build/$@ $@.$(TARGET)
-
-run: $(TOOLS) hello.bc
-	./build/tutorial01/src/tutorial01.$(TARGET) hello.bc
-
- 
-clean: $(CLEAN_RULES)
-	-rm -f a.out hello.bc hello.s hello.ll
-
-$(CLEAN_RULES):
-	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) -I $(SRC_DIR) -build-dir build/$(patsubst %-clean,%,$@) -clean $(patsubst %-clean,%,$@).$(TARGET)
-
-a.out: hello.c
-	$(CLANG) hello.c
-
-hello.bc: hello.c
-	$(CLANG) -c -emit-llvm $<
-
-hello.s: hello.c
-	$(CLANG) -S $<
-
-hello.ll: hello.c
-	$(CLANG) -S -emit-llvm $<
-```
+In this case, `hello.c` was compiled without optimizations.
 
 ---
 
 ## Exercise 1
 
-Make a branch `t1_ex1` where you work on exercise 1.
+Make a branch `t2_ex1` where you work on exercise 1.
 
-Implement the `add2` function code below that returns the sum of two integer arguments.
+Generate `hello.ll`:
 
-File `hello.c`:
-
-``` C
-#include <stdio.h>
-
-// your function here
-
-{
-	int res = add2(2, 3);
-	printf("hello world, add(2, 3) = %d\n", res);
-
-	return 0;
-}
+``` shell
+> clang -S -emit-llvm hello.c
+> make run > out
 ```
 
-Compile and run your code. Make sure it compiles without errors, and that it produces the expected result.
+Now edit the `out` file, and carefully match the `out` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
 
-Generate the file `hello.ll`.
-
-Identify in the generated file:
-0. the `add2` function declaration (and its type).
-1. the parameters in `add2`, and how parameters are declared, passed and stored.
-2. the actual addition.
-3. the return value.
-
-4. in `main`, the local variable `res` declaration.
-5. the call to `add2`
-6. storing the result in `res`.
-7. passing `res` as a parameter for `printf`
-
-Commit your changed `hello.c` and generated `hello.ll` (with your comments included). Be prepared to show your findings in the next session.
-
-As you see, LLVM-IR is very verbose, partly due to the Static Single Assignment (SSA) form, (allowing each "variable" to be assigned only once). Notice, all these intermediate assignments are not necessary, and a clever compiler (like LLVM) can optimize away most of them as we will see in the next exercise.
-
----
+Commit your edited `out` file.
 
 ## Exercise 2
 
-Make a branch `t1_ex2` where you work on exercise 2.
-Make sure you have the `hello.bc` that you created in exercise 1.
+Make a branch `t2_ex2` where you work on exercise 2.
 
-You can pass optimization options to `clang`. Run:
-
-``` shell
-> clang -O3 hello.bc
-> ./a.out
-```
-
-Well, presumably it executed faster, but this program is really simple, so we can't tell by the naked eye.
-
-Let's look at the LLVM-IR instead. You may change the makefile or just run:
+Now use your `hello.c` with the `add2` function.
 
 ``` shell
-> clang -S -O3 -emit-llvm hello.c
-> more hello.ll
+> cp ../part1/hello.c
+> clang -S -emit-llvm hello.c
+> make run > out2
 ```
 
-Now repeat the inspection on the new `hello.ll`:
+Now edit the `out2` file, and carefully match the `out2` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out2` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
 
-Identify in the generated file:
-0. The `add2` function declaration (and its type).
-1. The parameters in `add2`, and how parameters are declared, passed and stored.
-2. The actual addition.
-3. The return value.
+Commit your edited `out2` file.
 
-4. In `main`, the local variable `res` declaration.
-5. The call to `add2`
-6. Storing the result in `res`.
-7. Passing `res` as a parameter for `printf`
+## Exercise 3
 
-You should find that LLVM was able to a VERY good job!!!!
+Make a branch `t2_ex3` where you work on exercise 3.
 
-Here are some additional questions!
+Now its finally time for some coding. Change the program (`src/tutorial02.ml`) to that it prints the basic blocks for each function (intstead of printing all basic blocks at top level). 
 
-If trying to debug the code using `gdb`:
-8. Would you be able to spot the call to `add2`?
-9. Would you be able to spot the vale of `res`?
-10. ... what impact has optimization to debugging?
-11. Is `add2` actually needed at all in the executable?
-12. What do you think the linker should/will do with `add2`? (If you are really curious you may look into the generated `elf` using `llvm-objdump -d  a.out`. Notice, your code is linked to a C run-time/startup code, so it is not only your code that is visible in the `.elf`.)
-
-Commit your generated `hello.ll` (with your comments included). Be prepared to show your findings in the next session.
+Make sure your program compiles without errors/warnings and that it produces the expected output.
 
 ---
 
 ## Learning outcomes
 
-1. Installing and managing your tool-chain.
+1. Understanding LLVM objects, values, functions, basic blocs and instructions.
 
-2. Getting a first experience with `clang`, `opt`, and the use of `make` and Makefiles.
+2. Understanding how to inspect/traverse the LLVM objects.
 
-3. Getting basic knowledge on accessing LLVM from OCaml code.
+3. Writing OCaml to inspect specific LLVM objects.
 
-4. First experience on inspect generated LLVM-IR, both before and after optimization.
-
-5. Gaining a general feeling of the compilation process.
-
-If you feel lost at some point, you can always go back to this tutorial to ensure you got the basics of the compilation process pinned down.
-
-In the next tutorials we will focus on the LLVM-IR representation and how we can inspect, manipulate and generate our own LLVM-IR programs.
