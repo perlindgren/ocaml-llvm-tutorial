@@ -163,6 +163,7 @@ Generate `hello.ll`:
 
 ``` shell
 > clang -S -emit-llvm hello.c
+> make run > out
 ```
 
 Now edit the `out` file, and carefully match the `out` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
@@ -171,111 +172,35 @@ Commit your edited `out` file.
 
 ## Exercise 2
 
-Make a branch `t2_ex3` where you work on exercise 2.
+Make a branch `t2_ex2` where you work on exercise 2.
 
-Now checkout your `hello.c` with the `add2` function.
-
-``` shell
->
-```
-
-File `hello.c`:
-
-``` C
-#include <stdio.h>
-
-// your function here
-
-{
-	int res = add2(2, 3);
-	printf("hello world, add(2, 3) = %d\n", res);
-
-	return 0;
-}
-```
-
-Compile and run your code. Make sure it compiles without errors, and that it produces the expected result.
-
-Generate the file `hello.ll`.
-
-Identify in the generated file:
-0. the `add2` function declaration (and its type).
-1. the parameters in `add2`, and how parameters are declared, passed and stored.
-2. the actual addition.
-3. the return value.
-
-4. in `main`, the local variable `res` declaration.
-5. the call to `add2`
-6. storing the result in `res`.
-7. passing `res` as a parameter for `printf`
-
-Commit your changed `hello.c` and generated `hello.ll` (with your comments included). Be prepared to show your findings in the next session.
-
-As you see, LLVM-IR is very verbose, partly due to the Static Single Assignment (SSA) form, (allowing each "variable" to be assigned only once). Notice, all these intermediate assignments are not necessary, and a clever compiler (like LLVM) can optimize away most of them as we will see in the next exercise.
-
----
-
-## Exercise 2
-
-Make a branch `t1_ex2` where you work on exercise 2.
-Make sure you have the `hello.bc` that you created in exercise 1.
-
-You can pass optimization options to `clang`. Run:
+Now use your `hello.c` with the `add2` function.
 
 ``` shell
-> clang -O3 hello.bc
-> ./a.out
+> cp ../part1/hello.c
+> clang -S -emit-llvm hello.c
+> make run > out2
 ```
 
-Well, presumably it executed faster, but this program is really simple, so we can't tell by the naked eye.
+Now edit the `out2` file, and carefully match the `out2` file to the LLVM-IR (`hello.ll`) and comment (by inspecting the OCaml code) on how the `out2` file was generated. Be prepared to show that you fully understood the "analysis" made by the OCaml program.
 
-Let's look at the LLVM-IR instead. You may change the makefile or just run:
+Commit your edited `out2` file.
 
-``` shell
-> clang -S -O3 -emit-llvm hello.c
-> more hello.ll
-```
+## Exercise 3
 
-Now repeat the inspection on the new `hello.ll`:
+Make a branch `t2_ex3` where you work on exercise 3.
 
-Identify in the generated file:
-0. The `add2` function declaration (and its type).
-1. The parameters in `add2`, and how parameters are declared, passed and stored.
-2. The actual addition.
-3. The return value.
+Now its finally time for some coding. Change the program (`src/tutorial02.ml`) to that it prints the basic blocks for each function (intstead of printing all basic blocks at top level). 
 
-4. In `main`, the local variable `res` declaration.
-5. The call to `add2`
-6. Storing the result in `res`.
-7. Passing `res` as a parameter for `printf`
-
-You should find that LLVM was able to a VERY good job!!!!
-
-Here are some additional questions!
-
-If trying to debug the code using `gdb`:
-8. Would you be able to spot the call to `add2`?
-9. Would you be able to spot the vale of `res`?
-10. ... what impact has optimization to debugging?
-11. Is `add2` actually needed at all in the executable?
-12. What do you think the linker should/will do with `add2`? (If you are really curious you may look into the generated `elf` using `llvm-objdump -d  a.out`. Notice, your code is linked to a C run-time/startup code, so it is not only your code that is visible in the `.elf`.)
-
-Commit your generated `hello.ll` (with your comments included). Be prepared to show your findings in the next session.
+Make sure your program compiles without errors/warnings and that it produces the expected output.
 
 ---
 
 ## Learning outcomes
 
-1. Installing and managing your tool-chain.
+1. Understanding LLVM objects, values, functions, basic blocs and instructions.
 
-2. Getting a first experience with `clang`, `opt`, and the use of `make` and Makefiles.
+2. Understanding how to inspect/traverse the LLVM objects.
 
-3. Getting basic knowledge on accessing LLVM from OCaml code.
+3. Writing OCaml to inspect specific LLVM objects.
 
-4. First experience on inspect generated LLVM-IR, both before and after optimization.
-
-5. Gaining a general feeling of the compilation process.
-
-If you feel lost at some point, you can always go back to this tutorial to ensure you got the basics of the compilation process pinned down.
-
-In the next tutorials we will focus on the LLVM-IR representation and how we can inspect, manipulate and generate our own LLVM-IR programs.
