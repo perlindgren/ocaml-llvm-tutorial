@@ -1,3 +1,5 @@
+
+
 let rec print_type llty =
   let ty = Llvm.classify_type llty in
   match ty with
@@ -6,6 +8,7 @@ let rec print_type llty =
   | Llvm.TypeKind.Array    -> Printf.printf "  array of" ; print_type (Llvm.element_type llty)
   | Llvm.TypeKind.Pointer  -> Printf.printf "  pointer to" ; print_type (Llvm.element_type llty)
   | Llvm.TypeKind.Vector   -> Printf.printf "  vector of" ; print_type (Llvm.element_type llty)
+  | Llvm.TypeKind.Metadata -> Printf.printf "  metadata of" ; print_type (Llvm.element_type llty)
   | _                      -> Printf.printf "  other type\n"
 
 let print_val lv =
