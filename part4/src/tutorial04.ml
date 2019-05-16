@@ -18,6 +18,7 @@ let _ =
   add_target_triple "x86_64" llm ;
   let i8_t = i8_type llctx in
   let i32_t = i32_type llctx in
+  let int_exp i = const_int i32_t i in
   let fty = function_type i32_t [| |] in
 
   let f = define_function "main" fty llm in
@@ -25,13 +26,17 @@ let _ =
 
   let printf_ty = var_arg_function_type i32_t [| pointer_type i8_t |] in
   let printf = declare_function "printf" printf_ty llm in
-  add_function_attr printf Attribute.Nounwind ;
-  add_param_attr (param printf 0) Attribute.Nocapture ;
+  (* add_function_attr printf Attribute.Nounwind ; *)
+  (* add_param_attr (param printf 0) Attribute.Nocapture ; *)
 
   let s = build_global_stringptr "Hello, world!\n" "" llbuilder in
   (* try commenting these two lines and compare the result *)
-  let zero = const_int i32_t 0 in
-  let s = build_in_bounds_gep s [| zero |] "" llbuilder in
+  (* let zero = const_int i32_t 0 in
+     let s = build_in_bounds_gep s [| zero |] "" llbuilder in  *)
+
+  let c = int_exp 17 in
+
+  let exp = build_add c c in
 
   let _ = build_call printf [| s |] "" llbuilder in
 

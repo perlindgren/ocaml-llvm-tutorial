@@ -203,4 +203,3 @@ Make sure your program compiles without errors/warnings and that it produces the
 2. Understanding how to inspect/traverse the LLVM objects.
 
 3. Writing OCaml to inspect specific LLVM objects.
-

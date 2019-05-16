@@ -141,7 +141,7 @@ Now inspect the status:
 > echo $?
 ```
 
-You got a 2, right? 
+You got a 2, right?
 
 Now try:
 
@@ -150,7 +150,7 @@ Now try:
 > echo $?
 ```
 
-You got a 1, right? (If not your program did not compil correctly).
+You got a 1, right? (If not your program did not compile correctly).
 
 Try figuring out why the status was 2 when running `make run` (look at the Makefile, what did it actually do?).
 

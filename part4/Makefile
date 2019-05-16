@@ -9,7 +9,8 @@ LLVM_VERSION := 8.0
 CLANG := clang
 LLC := llc
 
-OCAMLBUILDFLAGS:=-r -classic-display -j 0 -cflags -w,@a-4
+#OCAMLBUILDFLAGS:=-r -classic-display -j 0 -cflags -w,@a-4
+OCAMLBUILDFLAGS:=-r -classic-display -j 0 
 
 export OCAMLPATH=/usr/lib/ocaml/llvm
 
@@ -43,7 +44,7 @@ hello.o: hello.s
 	$(CLANG) -c hello.s
 
 hello.s: hello.bc
-	$(LLC) $<
+	$(LLC) -relocation-model=pic $<
 
 hello.bc: $(TOOLS)
-	./build/tutorial04/src/tutorial04.byte $@
+	./build/tutorial04/src/tutorial04.native $@
