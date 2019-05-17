@@ -30,10 +30,11 @@ run: $(TOOLS) hello.bc
 	./build/tutorial02/src/tutorial02.$(TARGET) hello.bc
 
 clean: $(CLEAN_RULES)
-	-rm -f hello.bc
+	-rm -f hello.bc hello.ll
 
 $(CLEAN_RULES):
 	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) -I $(SRC_DIR) -build-dir build/$(patsubst %-clean,%,$@) -clean $(patsubst %-clean,%,$@).$(TARGET)
 
 hello.bc: hello.c
-	$(CLANG) -c -emit-llvm $<
+	$(CLANG) -c -g -emit-llvm $<
+	$(CLANG) -S -g -emit-llvm $<
