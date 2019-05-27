@@ -108,7 +108,9 @@ An example, first remove all output files:
 
 Compile into bitcode:
 
+``` shell
 > make hello.bc
+```
 
 Read the bitcode and generate a textual representation.
 
