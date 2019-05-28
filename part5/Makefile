@@ -29,7 +29,7 @@ $(TOOLS):
 	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS) $($@_OCAMLBUILDFLAGS_$(TARGET)) -I $(SRC_DIR) -build-dir build/$@ $@.$(TARGET)
 
 clean: $(CLEAN_RULES)
-	-rm -f hello hello.o hello.s hello.bc
+	-rm -f hello hello.o hello.s hello.bc hello.ll
 
 $(CLEAN_RULES):
 	$(OCAMLBUILD) $(OCAMLBUILDFLAGS) -I $(SRC_DIR) -build-dir build/$(patsubst %-clean,%,$@) -clean $(patsubst %-clean,%,$@).$(TARGET)
@@ -45,6 +45,7 @@ hello.o: hello.s
 
 hello.s: hello.bc
 	$(LLC) -relocation-model=pic $<
+	$(CLANG) -c -emit-llvm -S hello.bc
 
 hello.bc: $(TOOLS)
 	./build/tutorial05/src/tutorial05.native $@

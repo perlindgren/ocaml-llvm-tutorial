@@ -1,19 +1,23 @@
 open Llvm
 
+exception Error of string
+
 (* module L = Llvm *)
 
 type id = int
 
-module Int = struct
-  type t = int
+module String = struct
+  type t = string
   let compare = Pervasives.compare
 end
 
-module IntMap = Map.Make(Int)
+module StringMap = Map.Make(String)
+
+(* type ptype =  *)
 
 type aexpr =
   | Anum of int
-  | Avar of id
+  | Avar of string
   | Aadd of aexpr * aexpr
   | Asub of aexpr * aexpr
   | Amul of aexpr * aexpr
@@ -28,43 +32,27 @@ type bexpr =
 
 type com =
   | Cskip
-  | Cassign of id * aexpr 
+  | Cassign of string * aexpr 
+  (* | Clet of string * TypeKind.t * aexpr *)
+  | Clet of string * aexpr
   | Cseq of com * com
   | Cif of bexpr * com * com
   | Cwhile of bexpr * com
 
-open IntMap
-
-(* let op_exp (left_val: exp) (oper: A.oper) (right_val: exp) =
-   let arith f tmp_name = f left_val right_val tmp_name builder in
-   let compare f tmp_name =
-    let test = L.build_icmp f left_val right_val tmp_name builder in
-    L.build_zext test int_type "bool_tmp" builder
-   in
-   match oper with
-   | A.PlusOp -> arith L.build_add "add_tmp"
-   | A.MinusOp -> arith L.build_sub "minus_tmp"
-   | A.TimesOp -> arith L.build_mul "mul_tmp"
-   | A.DivideOp -> arith L.build_sdiv "div_tmp"
-   | A.EqOp -> compare L.Icmp.Eq "eq_tmp"
-   | A.NeqOp -> compare L.Icmp.Ne "neq_tmp"
-   | A.LtOp -> compare L.Icmp.Slt "lt_tmp"
-   | A.LeOp -> compare L.Icmp.Sle "le_tmp"
-   | A.GtOp -> compare L.Icmp.Sgt "gt_tmp"
-   | A.GeOp -> compare L.Icmp.Sge "ge_tmp" *)
-
-
-
-
+open StringMap
 let _ =
-  let m = add 1 "plepps" empty in
-  let f = find 1 m in
+
+  let named_values:(string, llvalue) Hashtbl.t = Hashtbl.create 10 in
+
+  let m = add "a" "plepps" empty in
+  let f = find "a" m in
   Printf.printf "Plepps : %s\n" f ;
 
   let e = Aadd (Anum 1, Anum 2) in
   let e = Aadd (e, e) in
 
-  let c = Cassign (1, e) in
+
+  let l = Clet ("a", Anum 1) in (* later we will have type *)
 
   (* let e = aexpr Aadd (aexpr (Anum 1) (aexpr (Anum 2)) in *)
 
@@ -76,14 +64,46 @@ let _ =
   let i32_t = i32_type llctx in
   let int_exp i = const_int i32_t i in
 
+  let c = Cassign ("a", e) in
+
+  (* Create an alloca instruction in the entry block of the function. 
+     This is used for mutable variables etc. *)
+  let create_entry_block_alloca f s =
+    (* let eb = entry_block f in
+       let ib = instr_begin eb in
+       let b = builder_at ib in
+    *)
+    let b = builder_at llctx in 
+    (* (entry_block f, ) *)
+    ()
+
+  (* let builder = builder_at (instr_begin (entry_block f)) in
+     build_alloca i32_t s builder *)
+  in
+
   let rec aexpr_to_llvm builder = function 
     | Anum v -> int_exp v
-    | Avar i -> int_exp i (* this is not correct *)
+    | Avar s -> 
+      let v = try Hashtbl.find named_values s with
+        | Not_found -> raise (Error "unknown variable name")
+      in
+      (* Load the value. *)
+      build_load v s builder
     | Aadd (ae_l, ae_r) -> 
       let l = aexpr_to_llvm builder ae_l in
       let r = aexpr_to_llvm builder ae_r in
       build_add l r "add" builder   
     | _ -> int_exp 0   
+  in
+
+  let rec com_to_llvm builder = function
+    (* | Clet (s, e) ->
+       let let_alloc = create_entry_block_alloca "main" s in 
+       let let_exp = aexpr_to_llvm builder e in
+
+       build_store let_alloc let_exp builder  *)
+    | _ -> int_exp 0 
+
   in
 
   let fty = function_type i32_t [| |] in
@@ -105,7 +125,9 @@ let _ =
   (* let c = int_exp 17 in
      let exp = build_add c c "" llbuilder in *)
 
-  let exp = aexpr_to_llvm llbuilder e in
+  (* let exp = aexpr_to_llvm llbuilder e in *)
+  let exp = com_to_llvm llbuilder l 
+  in
   (* array [| e1; e2; ...] *)
   let _ = build_call printf [|s; exp |] "not sure what this is for" llbuilder in
 
