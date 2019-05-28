@@ -1,6 +1,6 @@
 open Llvm
 
-module L = Llvm
+(* module L = Llvm *)
 
 type id = int
 
@@ -57,8 +57,6 @@ open IntMap
 
 
 let _ =
-
-
   let m = add 1 "plepps" empty in
   let f = find 1 m in
   Printf.printf "Plepps : %s\n" f ;
